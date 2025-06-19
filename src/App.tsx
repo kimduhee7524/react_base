@@ -1,25 +1,15 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
+import AppRoutes from './AppRoutes';
+import { useAuthStore } from '@/stores/auth';
 
-function App() {
-  const [count, setCount] = useState(0);
+export default function App() {
+  const setToken = useAuthStore((state) => state.setToken);
 
-  return (
-    <>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  );
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setToken(token);
+  }, [setToken]);
+
+  return <AppRoutes />;
 }
-
-export default App;
 
