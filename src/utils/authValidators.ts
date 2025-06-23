@@ -1,28 +1,5 @@
 import { ValidatorBuilder, ValidationRule } from '@/types/validation';
 
-export const required =
-  (fieldName: string): ValidationRule =>
-  (value) =>
-    !value.trim() ? `${fieldName}은(는) 필수입니다.` : null;
-
-export const minLength =
-  (min: number, fieldName: string): ValidationRule =>
-  (value) =>
-    value.length < min
-      ? `${fieldName}은(는) ${min}자 이상이어야 합니다.`
-      : null;
-
-export const emailFormat: ValidationRule = (value) =>
-  !/\S+@\S+\.\S+/.test(value) ? '이메일 형식이 아닙니다.' : null;
-
-export const phoneFormat: ValidationRule = (value) =>
-  !/^\d{10,11}$/.test(value) ? '전화번호 형식이 올바르지 않습니다.' : null;
-
-export const matchField =
-  (getOtherValue: () => string, fieldName: string): ValidationRule =>
-  (value) =>
-    value !== getOtherValue() ? `${fieldName}이(가) 일치하지 않습니다.` : null;
-
 function createValidatorBuilder(): ValidatorBuilder {
   const rules: ValidationRule[] = [];
 

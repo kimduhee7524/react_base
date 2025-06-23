@@ -1,8 +1,8 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { ValidationRule } from '@/types/validation';
 
 interface UseFormControllerOptions<T> {
-  validators?: Record<string, { rules: ValidationRule[] }>;
+  validators?: Partial<Record<keyof T, { rules: ValidationRule[] }>>;
   onSubmit: (values: T) => Promise<void>;
 }
 
@@ -10,13 +10,16 @@ export function useFormController<T>({
   validators = {},
   onSubmit,
 }: UseFormControllerOptions<T>) {
-  const refs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const refs = useRef<Partial<Record<keyof T, HTMLInputElement | null>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof T, string | null>>>(
+    {}
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const timers = useRef<Record<string, NodeJS.Timeout>>({});
-  const getValue = (name: string) => refs.current[name]?.value || '';
+  const timers = useRef<Partial<Record<keyof T, NodeJS.Timeout>>>({});
 
-  const runValidators = (name: string, value: string) => {
+  const getValue = (name: string) => refs.current[name as keyof T]?.value || '';
+
+  const runValidators = (name: keyof T, value: string) => {
     const rules = validators[name]?.rules || [];
     for (const rule of rules) {
       const error = rule(value, getValue);
@@ -25,7 +28,22 @@ export function useFormController<T>({
     return null;
   };
 
-  const handleInput = useCallback((name: string) => {
+  // input 타입 기준으로 변환
+  const parseValue = <K extends keyof T>(key: K, raw: string): T[K] => {
+    const el = refs.current[key];
+    if (!el) return raw as T[K];
+
+    switch (el.type) {
+      case 'number':
+        return Number(raw) as T[K];
+      case 'checkbox':
+        return el.checked as T[K];
+      default:
+        return raw as T[K];
+    }
+  };
+
+  const handleInput = useCallback((name: keyof T) => {
     const el = refs.current[name];
     if (!el) return;
     const value = el.value;
@@ -37,11 +55,13 @@ export function useFormController<T>({
   }, []);
 
   const validateAll = () => {
-    const newErrors: Record<string, string | null> = {};
+    const newErrors: Partial<Record<keyof T, string | null>> = {};
     for (const key in refs.current) {
-      const el = refs.current[key];
+      const k = key as keyof T;
+      const el = refs.current[k];
       if (el) {
-        newErrors[key] = runValidators(key, el.value);
+        const raw = el.type === 'checkbox' ? String(el.checked) : el.value;
+        newErrors[k] = runValidators(k, raw);
       }
     }
     setErrors(newErrors);
@@ -51,21 +71,34 @@ export function useFormController<T>({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAll()) return;
-    const values: Record<string, string> = {};
+
+    const values = {} as T;
     for (const key in refs.current) {
-      values[key] = refs.current[key]?.value || '';
+      const k = key as keyof T;
+      const el = refs.current[k];
+      if (!el) continue;
+      const raw = el.value;
+      values[k] = parseValue(k, raw);
     }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(values as T);
+      await onSubmit(values);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const registerRef = (name: string) => (el: HTMLInputElement | null) => {
+  const registerRef = (name: keyof T) => (el: HTMLInputElement | null) => {
     refs.current[name] = el;
   };
+
+  useEffect(() => {
+    const currentTimers = timers.current;
+    return () => {
+      Object.values(currentTimers).forEach(clearTimeout);
+    };
+  }, []);
 
   return {
     refs,
