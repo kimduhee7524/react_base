@@ -1,90 +1,131 @@
-import { ValidatorBuilder, ValidationRule } from '@/types/validation';
+import {
+  StringValidatorBuilder,
+  NumberValidatorBuilder,
+  BooleanValidatorBuilder,
+  ValidationRule,
+} from '@/types/validation';
 
-export const required =
-  (fieldName: string): ValidationRule =>
-  (value) =>
-    !value.trim() ? `${fieldName}은(는) 필수입니다.` : null;
+class StringValidator implements StringValidatorBuilder {
+  type = 'string' as const;
+  rules: ValidationRule[];
 
-export const minLength =
-  (min: number, fieldName: string): ValidationRule =>
-  (value) =>
-    value.length < min
-      ? `${fieldName}은(는) ${min}자 이상이어야 합니다.`
-      : null;
+  constructor(rules: ValidationRule[] = []) {
+    this.rules = rules;
+  }
 
-export const emailFormat: ValidationRule = (value) =>
-  !/\S+@\S+\.\S+/.test(value) ? '이메일 형식이 아닙니다.' : null;
+  required(message = '필수 입력입니다.'): this {
+    const rule: ValidationRule = (v) => (v.trim() ? null : message);
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 
-export const phoneFormat: ValidationRule = (value) =>
-  !/^\d{10,11}$/.test(value) ? '전화번호 형식이 올바르지 않습니다.' : null;
+  min(n: number, message?: string): this {
+    const rule: ValidationRule = (v) =>
+      v.length >= n ? null : message || `${n}자 이상 입력해주세요.`;
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 
-export const matchField =
-  (getOtherValue: () => string, fieldName: string): ValidationRule =>
-  (value) =>
-    value !== getOtherValue() ? `${fieldName}이(가) 일치하지 않습니다.` : null;
+  max(n: number, message?: string): this {
+    const rule: ValidationRule = (v) =>
+      v.length <= n ? null : message || `${n}자 이하로 입력해주세요.`;
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 
-function createValidatorBuilder(): ValidatorBuilder {
-  const rules: ValidationRule[] = [];
+  email(message = '이메일 형식이 아닙니다.'): this {
+    const rule: ValidationRule = (v) =>
+      /\S+@\S+\.\S+/.test(v) ? null : message;
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 
-  const builder: ValidatorBuilder = {
-    rules,
+  regex(pattern: RegExp, message = '형식이 올바르지 않습니다.'): this {
+    const rule: ValidationRule = (v) => (pattern.test(v) ? null : message);
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 
-    required(message = '필수 입력입니다.') {
-      rules.push((value) => (value.trim() ? null : message));
-      return builder;
-    },
+  same(field: string, message = '일치하지 않습니다.'): this {
+    const rule: ValidationRule = (v, get) =>
+      v === get?.(field) ? null : message;
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 
-    min(n, message) {
-      rules.push((value) =>
-        value.length >= n ? null : message || `${n}자 이상 입력해주세요.`
-      );
-      return builder;
-    },
-
-    max(n, message) {
-      rules.push((value) =>
-        value.length <= n ? null : message || `${n}자 이하로 입력해주세요.`
-      );
-      return builder;
-    },
-
-    email(message = '이메일 형식이 아닙니다.') {
-      rules.push((value) => (/\S+@\S+\.\S+/.test(value) ? null : message));
-      return builder;
-    },
-
-    regex(pattern, message = '형식이 올바르지 않습니다.') {
-      rules.push((value) => (pattern.test(value) ? null : message));
-      return builder;
-    },
-
-    custom(rule) {
-      rules.push(rule);
-      return builder;
-    },
-
-    same(field, message = '일치하지 않습니다.') {
-      rules.push((value, get) => (value === get?.(field) ? null : message));
-      return builder;
-    },
-  };
-
-  return builder;
+  custom(rule: ValidationRule): this {
+    return new StringValidator([...this.rules, rule]) as this;
+  }
 }
 
-export function string() {
-  return createValidatorBuilder();
+class NumberValidator implements NumberValidatorBuilder {
+  type = 'number' as const;
+  rules: ValidationRule[];
+
+  constructor(rules: ValidationRule[] = []) {
+    this.rules = rules.length
+      ? rules
+      : [(v) => (isNaN(Number(v)) ? '숫자만 입력 가능합니다.' : null)];
+  }
+
+  required(message = '필수 입력입니다.'): this {
+    const rule: ValidationRule = (v) =>
+      v?.toString()?.trim() ? null : message;
+    return new NumberValidator([...this.rules, rule]) as this;
+  }
+
+  min(n: number, message?: string): this {
+    const rule: ValidationRule = (v) =>
+      Number(v) >= n ? null : message || `${n} 이상이어야 합니다.`;
+    return new NumberValidator([...this.rules, rule]) as this;
+  }
+
+  max(n: number, message?: string): this {
+    const rule: ValidationRule = (v) =>
+      Number(v) <= n ? null : message || `${n} 이하이어야 합니다.`;
+    return new NumberValidator([...this.rules, rule]) as this;
+  }
+
+  same(field: string, message = '일치하지 않습니다.'): this {
+    const rule: ValidationRule = (v, get) =>
+      v === get?.(field) ? null : message;
+    return new NumberValidator([...this.rules, rule]) as this;
+  }
+
+  custom(rule: ValidationRule): this {
+    return new NumberValidator([...this.rules, rule]) as this;
+  }
 }
 
-export function number() {
-  const builder = createValidatorBuilder();
-  builder.rules.unshift((value) =>
-    isNaN(Number(value)) ? '숫자만 입력 가능합니다.' : null
-  );
-  return builder;
+class BooleanValidator implements BooleanValidatorBuilder {
+  type = 'boolean' as const;
+  rules: ValidationRule[];
+
+  constructor(rules: ValidationRule[] = []) {
+    this.rules = rules;
+  }
+
+  required(message = '필수 항목입니다.'): this {
+    const rule: ValidationRule = (v) => (v === 'true' ? null : message);
+    return new BooleanValidator([...this.rules, rule]) as this;
+  }
+
+  optional(): this {
+    const rule: ValidationRule = () => null;
+    return new BooleanValidator([...this.rules, rule]) as this;
+  }
+
+  nullable(): this {
+    const rule: ValidationRule = (v) =>
+      v === '' || v === 'false' ? null : null;
+    return new BooleanValidator([...this.rules, rule]) as this;
+  }
 }
 
-export const s = {
-  string,
-  number,
-};
+export function string(): StringValidatorBuilder {
+  return new StringValidator();
+}
+
+export function number(): NumberValidatorBuilder {
+  return new NumberValidator();
+}
+
+export function boolean(): BooleanValidatorBuilder {
+  return new BooleanValidator();
+}
+
+export const s = { string, number, boolean };
