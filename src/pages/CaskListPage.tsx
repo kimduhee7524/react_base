@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCaskList } from '@/services/api/cask';
-import type { Cask, CaskSearchDto } from '@/types/cask';
-
+import type { Cask, CaskSearchDto, Pageable } from '@/types/cask';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -14,11 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 export default function CaskListPage() {
-  const [filters, setFilters] = useState<CaskSearchDto>({
-    is_active: true,
-    order_by: 0,
+  const [filters, setFilters] = useState<CaskSearchDto>({});
+  const [pageable, setPageable] = useState<Pageable>({
+    page: 1,
+    size: 10,
   });
+
   const [casks, setCasks] = useState<Cask[]>([]);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,8 +28,9 @@ export default function CaskListPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getCaskList(filters);
-      setCasks(data);
+      const res = await getCaskList({ pageable, searchDto: filters });
+      setCasks(res.data.content);
+      setTotalPages(res.data.totalPages);
     } catch (err) {
       console.error(err);
       setError('캐스크 목록을 불러오는 데 실패했습니다.');
@@ -38,7 +41,7 @@ export default function CaskListPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [filters, pageable]);
 
   const handleChange = <K extends keyof CaskSearchDto>(
     name: K,
@@ -52,6 +55,7 @@ export default function CaskListPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPageable((prev) => ({ ...prev, page: 0 }));
     fetchData();
   };
 
@@ -61,25 +65,27 @@ export default function CaskListPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="cask_name">Cask 이름</Label>
-            <Input
-              id="cask_name"
-              value={filters.cask_name ?? ''}
-              onChange={(e) => handleChange('cask_name', e.target.value)}
-              placeholder="예: Aberlour"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="cask_number">Cask 번호</Label>
-            <Input
-              id="cask_number"
-              value={filters.cask_number ?? ''}
-              onChange={(e) => handleChange('cask_number', e.target.value)}
-              placeholder="예: 123456"
-            />
-          </div>
+          {[
+            ['cask_name', 'Cask 이름'],
+            ['cask_number', 'Cask 번호'],
+            ['cask_size', 'Cask 사이즈'],
+            ['distillery_display_name', '표시 증류소 이름'],
+            ['distillery_true_name', '실제 증류소 이름'],
+            ['fill_type', 'Fill Type'],
+            ['malt_type', 'Malt Type'],
+            ['seasoning', 'Seasoning'],
+            ['warehouse', 'Warehouse'],
+            ['wood_type', 'Wood Type'],
+          ].map(([key, label]) => (
+            <div key={key}>
+              <Label htmlFor={key}>{label}</Label>
+              <Input
+                id={key}
+                value={(filters as any)[key] ?? ''}
+                onChange={(e) => handleChange(key as any, e.target.value)}
+              />
+            </div>
+          ))}
 
           <div>
             <Label htmlFor="is_active">활성 여부</Label>
@@ -123,20 +129,46 @@ export default function CaskListPage() {
       ) : casks.length === 0 ? (
         <p>표시할 캐스크가 없습니다.</p>
       ) : (
-        <ul className="space-y-4">
-          {casks.map((cask) => (
-            <li
-              key={cask.cask_id}
-              className="p-4 border rounded-md shadow-sm bg-card"
+        <>
+          <ul className="space-y-4">
+            {casks.map((cask) => (
+              <li
+                key={cask.cask_id}
+                className="p-4 border rounded-md shadow-sm bg-card"
+              >
+                <div className="font-semibold text-lg">{cask.cask_name}</div>
+                <div className="text-sm text-muted-foreground">
+                  번호: {cask.cask_number} / 몰트: {cask.malt_type} / ABV:{' '}
+                  {cask.abv}%
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex justify-center space-x-4 mt-6">
+            <Button
+              variant="outline"
+              disabled={pageable.page === 0}
+              onClick={() =>
+                setPageable((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
             >
-              <div className="font-semibold text-lg">{cask.cask_name}</div>
-              <div className="text-sm text-muted-foreground">
-                번호: {cask.cask_number} / 몰트: {cask.malt_type} / ABV:{' '}
-                {cask.abv}%
-              </div>
-            </li>
-          ))}
-        </ul>
+              이전
+            </Button>
+            <span>
+              {pageable.page + 1} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              disabled={pageable.page + 1 >= totalPages}
+              onClick={() =>
+                setPageable((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+            >
+              다음
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

@@ -3,9 +3,9 @@ import Navbar from './components/Navbar';
 
 export default function DefaultLayout() {
   return (
-    <div className="min-h-screen bg-background overflow-y-auto">
+    <div className="min-h-screen overflow-y-auto">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="px-4 py-6">
         <Outlet />
       </main>
     </div>
