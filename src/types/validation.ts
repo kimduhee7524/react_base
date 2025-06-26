@@ -3,15 +3,32 @@ export type ValidationRule = (
   get?: (field: string) => string
 ) => string | null;
 
-export interface ValidatorBuilder {
+export interface StringValidatorBuilder {
+  type: 'string';
   rules: ValidationRule[];
-  required(message?: string): ValidatorBuilder;
-  min(n: number, message?: string): ValidatorBuilder;
-  max(n: number, message?: string): ValidatorBuilder;
-  email(message?: string): ValidatorBuilder;
-  regex(pattern: RegExp, message?: string): ValidatorBuilder;
-  custom(
-    rule: (value: string, get: (field: string) => string) => string | null
-  ): ValidatorBuilder;
-  same(field: string, message?: string): ValidatorBuilder;
+  required(message?: string): this;
+  min(n: number, message?: string): this;
+  max(n: number, message?: string): this;
+  email(message?: string): this;
+  regex(pattern: RegExp, message?: string): this;
+  same(field: string, message?: string): this;
+  custom(rule: ValidationRule): this;
+}
+
+export interface NumberValidatorBuilder {
+  type: 'number';
+  rules: ValidationRule[];
+  required(message?: string): this;
+  min(n: number, message?: string): this;
+  max(n: number, message?: string): this;
+  same(field: string, message?: string): this;
+  custom(rule: ValidationRule): this;
+}
+
+export interface BooleanValidatorBuilder {
+  type: 'boolean';
+  rules: ValidationRule[];
+  required(message?: string): this;
+  optional(): this;
+  nullable(): this;
 }
