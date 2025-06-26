@@ -1,23 +1,15 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import {
-  StringValidatorBuilder,
-  NumberValidatorBuilder,
-  BooleanValidatorBuilder,
-} from '@/types/validation';
-
-type Validators =
-  | StringValidatorBuilder
-  | NumberValidatorBuilder
-  | BooleanValidatorBuilder;
+import { Validators, isBooleanValidator } from '@/utils/validatorGuards';
+import { getInputValue } from '@/utils/formHelpers';
 
 interface UseFormControllerOptions<T> {
-  validators?: Partial<Record<keyof T, Validators>>;
+  validators: Record<keyof T, Validators>;
   defaultValues?: Partial<T>;
   onSubmit: (values: T) => Promise<void>;
 }
 
 export function useFormController<T>({
-  validators = {},
+  validators,
   defaultValues = {},
   onSubmit,
 }: UseFormControllerOptions<T>) {
@@ -29,13 +21,12 @@ export function useFormController<T>({
   const timers = useRef<Partial<Record<keyof T, NodeJS.Timeout>>>({});
 
   const getValue = useCallback((field: keyof T): string => {
-    const el = refs.current[field];
-    if (!el) return '';
-    return el.type === 'checkbox' ? String(el.checked) : el.value || '';
+    return getInputValue(refs.current[field]);
   }, []);
 
   const runValidators = (name: keyof T, value: string) => {
-    const rules = validators[name]?.rules || [];
+    const validator = validators[name];
+    const rules = validator.rules || [];
     for (const rule of rules) {
       const error = rule(value, (field) => getValue(field as keyof T));
       if (error) return error;
@@ -45,8 +36,6 @@ export function useFormController<T>({
 
   const parseValue = <K extends keyof T>(key: K, raw: string): T[K] => {
     const validator = validators[key];
-    if (!validator) return raw as T[K];
-
     switch (validator.type) {
       case 'number':
         return Number(raw) as T[K];
@@ -61,7 +50,7 @@ export function useFormController<T>({
   const handleInput = useCallback((name: keyof T) => {
     const el = refs.current[name];
     if (!el) return;
-    const value = el.type === 'checkbox' ? String(el.checked) : el.value;
+    const value = getInputValue(el);
 
     clearTimeout(timers.current[name]);
     timers.current[name] = setTimeout(() => {
@@ -76,7 +65,7 @@ export function useFormController<T>({
       const k = key as keyof T;
       const el = refs.current[k];
       if (el) {
-        const raw = el.type === 'checkbox' ? String(el.checked) : el.value;
+        const raw = getInputValue(el);
         newErrors[k] = runValidators(k, raw);
       }
     }
@@ -93,7 +82,7 @@ export function useFormController<T>({
       const k = key as keyof T;
       const el = refs.current[k];
       if (!el) continue;
-      const raw = el.type === 'checkbox' ? String(el.checked) : el.value;
+      const raw = getInputValue(el);
       values[k] = parseValue(k, raw);
     }
 
@@ -110,7 +99,7 @@ export function useFormController<T>({
     const value = defaultValues[name];
 
     if (el && !refs.current[name]) {
-      if (validator?.type === 'boolean') {
+      if (isBooleanValidator(validator)) {
         el.checked = Boolean(value);
       } else if (value != null) {
         el.value = String(value);
