@@ -5,6 +5,7 @@ import SignupPage from '@/pages/SignupPage';
 import HomePage from '@/pages/HomePage';
 import DefaultLayout from '@/layouts/DefaultLayout';
 import CaskListPage from '@/pages/CaskListPage';
+import CaskDetailPage from '@/pages/CaskDetailPage';
 
 const appRouter = createBrowserRouter([
   {
@@ -13,6 +14,7 @@ const appRouter = createBrowserRouter([
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/cask/list', element: <CaskListPage /> },
+      { path: '/cask/:id', element: <CaskDetailPage /> },
     ],
   },
   {
