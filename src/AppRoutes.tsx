@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { ModalProvider } from '@/lib/modal/ModalContext';
 import AuthLayout from '@/layouts/AuthLayout';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
@@ -29,8 +30,8 @@ const appRouter = createBrowserRouter([
 
 export default function AppRoutes() {
   return (
-    <>
+    <ModalProvider>
       <RouterProvider router={appRouter} />
-    </>
+    </ModalProvider>
   );
 }

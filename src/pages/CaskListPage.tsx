@@ -3,15 +3,20 @@ import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { caskSearchSchema } from '@/schemas/caskSchema';
-import type { CaskSearchFormValues } from '@/schemas/caskSchema';
-import { getCaskList } from '@/services/api/cask';
+import type {
+  CaskSearchFormValues,
+  CaskFormValues,
+} from '@/schemas/caskSchema';
+import { getCaskList, createCask } from '@/services/api/cask';
 import type { Cask, CaskSearchDto } from '@/types/cask';
 import { Pagination } from '@/components/common/Pagination';
 import { CaskFilterForm } from '@/components/CaskFilterForm';
 import { Button } from '@/components/ui/button';
-import { CaskCreateModal } from '@/components/CaskCreateModal';
 import { CaskSkeletonItem } from '@/components/skeleton/CaskSkeletonItem';
 import { CaskListItem } from '@/components/CaskListItem';
+import { useModal } from '@/lib/modal/useModal';
+import { CaskCreateModal } from '@/components/CaskCreateModal';
+import { toast } from 'sonner';
 
 export default function CaskListPage() {
   const PAGE_SIZE = 10;
@@ -20,7 +25,8 @@ export default function CaskListPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const { open } = useModal<CaskFormValues>(CaskCreateModal);
 
   const currentPage = Number(searchParams.get('page') || '1');
   const currentSort = searchParams.get('sort') || '';
@@ -84,9 +90,7 @@ export default function CaskListPage() {
 
   const onSubmit = () => {
     const values = getValues();
-    const newParams: Record<string, string> = {
-      page: '1',
-    };
+    const newParams: Record<string, string> = { page: '1' };
 
     Object.entries(values).forEach(([key, val]) => {
       if (typeof val === 'boolean') {
@@ -105,11 +109,23 @@ export default function CaskListPage() {
     setSearchParams(newParams);
   };
 
+  const handleCreateClick = async () => {
+    try {
+      const result = await open();
+      if (!result) return;
+      await createCask(result);
+      toast.success('캐스크 등록 완료');
+      fetchData();
+    } catch (err) {
+      toast.error('등록 실패');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div className="flex justify-between items-center w-full">
         <h1 className="text-2xl font-bold">Cask 리스트</h1>
-        <Button onClick={() => setShowCreateModal(true)}>캐스크 등록</Button>
+        <Button onClick={handleCreateClick}>캐스크 등록</Button>
       </div>
 
       <CaskFilterForm form={form} onSubmit={onSubmit} />
@@ -139,12 +155,6 @@ export default function CaskListPage() {
           />
         </>
       )}
-
-      <CaskCreateModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-        onSuccess={fetchData}
-      />
     </div>
   );
 }
