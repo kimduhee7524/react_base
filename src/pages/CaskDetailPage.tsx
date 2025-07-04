@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,12 +17,12 @@ import { ErrorMessage } from '@/components/common/ErrorMessage';
 import { toast } from 'sonner';
 import { CASK_CURRENCY_OPTIONS, OLARLA_OPTIONS } from '@/constants';
 import { CaskEvent } from '@/types/cask';
+import { useQueryParams } from '@/lib/server-state/useQueryParams';
+import { useEffect, useState } from 'react';
 
 export default function CaskDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [events, setEvents] = useState<CaskEvent[]>([]);
 
   const form = useForm<CaskFormValues>({
@@ -37,24 +36,15 @@ export default function CaskDetailPage() {
     formState: { isSubmitting },
   } = form;
 
+  const { data, loading, error } = useQueryParams(getCaskDetail, Number(id));
+
   useEffect(() => {
-    if (!id) return;
+    if (!data) return;
 
-    const fetchDetail = async () => {
-      try {
-        const { events, ...formData } = await getCaskDetail(Number(id));
-        reset(formData);
-        setEvents(events);
-      } catch (err) {
-        console.error(err);
-        setLoadError('캐스크 정보를 불러오는 데 실패했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDetail();
-  }, [id, reset]);
+    const { events: eventList, ...formData } = data;
+    reset(formData);
+    setEvents(eventList);
+  }, [data, reset]);
 
   const onSubmit = async (values: CaskFormValues) => {
     try {
@@ -82,7 +72,7 @@ export default function CaskDetailPage() {
   };
 
   if (loading) return <LoadingSpinner size="lg" className="h-[60vh]" />;
-  if (loadError) return <ErrorMessage message={loadError} />;
+  if (error) return <ErrorMessage message={error.message} />;
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,7 +7,7 @@ import type {
   CaskFormValues,
 } from '@/schemas/caskSchema';
 import { getCaskList, createCask } from '@/services/api/cask';
-import type { Cask, CaskSearchDto } from '@/types/cask';
+import type { CaskSearchDto } from '@/types/cask';
 import { Pagination } from '@/components/common/Pagination';
 import { CaskFilterForm } from '@/components/CaskFilterForm';
 import { Button } from '@/components/ui/button';
@@ -17,14 +16,11 @@ import { CaskListItem } from '@/components/CaskListItem';
 import { useModal } from '@/lib/modal/useModal';
 import { CaskCreateModal } from '@/components/CaskCreateModal';
 import { toast } from 'sonner';
+import { useQueryParams } from '@/lib/server-state/useQueryParams';
 
 export default function CaskListPage() {
   const PAGE_SIZE = 10;
   const [searchParams, setSearchParams] = useSearchParams();
-  const [casks, setCasks] = useState<Cask[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const { open } = useModal<CaskFormValues>(CaskCreateModal);
 
@@ -54,39 +50,21 @@ export default function CaskListPage() {
   });
 
   const { getValues } = form;
+  const values = getValues();
+  const { sort, ...filters } = values;
 
-  const fetchData = async () => {
-    const values = getValues();
-    const { sort, ...filters } = values;
-
-    const searchDto: CaskSearchDto = {
-      ...filters,
-    };
-
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await getCaskList({
-        pageable: {
-          page: currentPage,
-          size: PAGE_SIZE,
-          sort: [sort],
-        },
-        searchDto,
-      });
-      setCasks(res.data.content);
-      setTotalPages(res.data.totalPages);
-    } catch (err) {
-      console.error(err);
-      setError('캐스크 목록을 불러오는 데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
+  const searchDto: CaskSearchDto = {
+    ...filters,
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [searchParams]);
+  const { data, loading, error, refetch } = useQueryParams(getCaskList, {
+    pageable: {
+      page: currentPage,
+      size: PAGE_SIZE,
+      sort: [sort],
+    },
+    searchDto,
+  });
 
   const onSubmit = () => {
     const values = getValues();
@@ -115,7 +93,7 @@ export default function CaskListPage() {
       if (!result) return;
       await createCask(result);
       toast.success('캐스크 등록 완료');
-      fetchData();
+      refetch();
     } catch (err) {
       toast.error('등록 실패');
     }
@@ -137,20 +115,20 @@ export default function CaskListPage() {
           ))}
         </ul>
       ) : error ? (
-        <p className="text-destructive">{error}</p>
-      ) : casks.length === 0 ? (
+        <p className="text-destructive">{error.message}</p>
+      ) : data.data.content.length === 0 ? (
         <p>표시할 캐스크가 없습니다.</p>
       ) : (
         <>
           <ul className="space-y-4">
-            {casks.map((cask) => (
+            {data.data.content.map((cask) => (
               <CaskListItem key={cask.cask_id} cask={cask} />
             ))}
           </ul>
 
           <Pagination
             currentPage={currentPage - 1}
-            totalPages={totalPages}
+            totalPages={data.data.totalPages}
             onPageChange={handlePageChange}
           />
         </>
