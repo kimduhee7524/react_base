@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FormErrorMessage } from '@/components/form/FormErrorMessage';
+import { FormErrorMessage } from '@/components/FormErrorMessage';
 import { toast, Toaster } from 'sonner';
 import { login } from '@/services/api/auth';
 import { useAuthStore } from '@/stores/auth';

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { signup } from '@/services/api/auth';
-import { FormErrorMessage } from '@/components/form/FormErrorMessage';
+import { FormErrorMessage } from '@/components/FormErrorMessage';
 import { SignupReq } from '@/types/auth';
 
 export default function SignupPage() {
