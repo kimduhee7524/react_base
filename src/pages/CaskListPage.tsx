@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,22 +7,20 @@ import type {
   CaskSearchFormValues,
   CaskFormValues,
 } from '@/schemas/caskSchema';
-import { getCaskList, createCask } from '@/services/api/cask';
 import type { CaskSearchDto } from '@/types/cask';
-import { Pagination } from '@/components/common/Pagination';
-import { CaskFilterForm } from '@/components/CaskFilterForm';
 import { Button } from '@/components/ui/button';
-import { CaskSkeletonItem } from '@/components/skeleton/CaskSkeletonItem';
-import { CaskListItem } from '@/components/CaskListItem';
+import { CaskFilterForm } from '@/components/CaskFilterForm';
 import { useModal } from '@/lib/modal/useModal';
 import { CaskCreateModal } from '@/components/CaskCreateModal';
 import { toast } from 'sonner';
-import { useQueryParams } from '@/lib/server-state/useQueryParams';
+import { CaskSkeletonItem } from '@/components/skeleton/CaskSkeletonItem';
+import { CaskList } from '@/components/CaskList';
+import { ErrorBoundary } from 'react-error-boundary';
+import { useCreateCaskMutation } from '@/queries/cask';
 
 export default function CaskListPage() {
   const PAGE_SIZE = 10;
   const [searchParams, setSearchParams] = useSearchParams();
-
   const { open } = useModal<CaskFormValues>(CaskCreateModal);
 
   const currentPage = Number(searchParams.get('page') || '1');
@@ -44,38 +43,29 @@ export default function CaskListPage() {
   const form = useForm<CaskSearchFormValues>({
     resolver: zodResolver(caskSearchSchema),
     mode: 'onChange',
-    defaultValues: {
-      ...formValuesFromQuery,
-    },
+    defaultValues: formValuesFromQuery,
   });
 
-  const { getValues } = form;
-  const values = getValues();
+  const values = form.getValues();
   const { sort, ...filters } = values;
+  const searchDto: CaskSearchDto = { ...filters };
 
-  const searchDto: CaskSearchDto = {
-    ...filters,
-  };
-
-  const { data, loading, error, refetch } = useQueryParams(getCaskList, {
-    pageable: {
-      page: currentPage,
-      size: PAGE_SIZE,
-      sort: [sort],
-    },
-    searchDto,
+  const createCaskMutation = useCreateCaskMutation(() => {
+    toast.success('캐스크 등록 완료');
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      updated.set('page', '1');
+      return updated;
+    });
   });
 
   const onSubmit = () => {
-    const values = getValues();
+    const values = form.getValues();
     const newParams: Record<string, string> = { page: '1' };
 
     Object.entries(values).forEach(([key, val]) => {
-      if (typeof val === 'boolean') {
-        newParams[key] = String(val);
-      } else if (val) {
-        newParams[key] = val;
-      }
+      if (typeof val === 'boolean') newParams[key] = String(val);
+      else if (val) newParams[key] = val;
     });
 
     setSearchParams(newParams);
@@ -91,10 +81,8 @@ export default function CaskListPage() {
     try {
       const result = await open();
       if (!result) return;
-      await createCask(result);
-      toast.success('캐스크 등록 완료');
-      refetch();
-    } catch (err) {
+      createCaskMutation.mutate(result);
+    } catch {
       toast.error('등록 실패');
     }
   };
@@ -108,31 +96,34 @@ export default function CaskListPage() {
 
       <CaskFilterForm form={form} onSubmit={onSubmit} />
 
-      {loading ? (
-        <ul className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <CaskSkeletonItem key={i} />
-          ))}
-        </ul>
-      ) : error ? (
-        <p className="text-destructive">{error.message}</p>
-      ) : data.data.content.length === 0 ? (
-        <p>표시할 캐스크가 없습니다.</p>
-      ) : (
-        <>
-          <ul className="space-y-4">
-            {data.data.content.map((cask) => (
-              <CaskListItem key={cask.cask_id} cask={cask} />
-            ))}
-          </ul>
-
-          <Pagination
-            currentPage={currentPage - 1}
-            totalPages={data.data.totalPages}
+      <ErrorBoundary
+        fallbackRender={({ error }) => (
+          <p className="text-destructive">
+            {error.message || '알 수 없는 에러가 발생했습니다.'}
+          </p>
+        )}
+      >
+        <Suspense
+          fallback={
+            <ul className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <CaskSkeletonItem key={i} />
+              ))}
+            </ul>
+          }
+        >
+          <CaskList
+            pageable={{
+              page: currentPage,
+              size: PAGE_SIZE,
+              sort: [sort],
+            }}
+            searchDto={searchDto}
+            currentPage={currentPage}
             onPageChange={handlePageChange}
           />
-        </>
-      )}
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }
