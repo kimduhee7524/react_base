@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import AppRoutes from './AppRoutes';
 import { useAuthStore } from '@/stores/auth';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 export default function App() {
   const setToken = useAuthStore((state) => state.setToken);
@@ -10,6 +13,9 @@ export default function App() {
     setToken(token);
   }, [setToken]);
 
-  return <AppRoutes />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppRoutes />
+    </QueryClientProvider>
+  );
 }
-
