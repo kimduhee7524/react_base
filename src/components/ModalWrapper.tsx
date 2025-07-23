@@ -1,45 +1,25 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogOverlay,
-  DialogPortal,
-  DialogClose,
-} from '@/components/ui/dialog';
 import { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ModalWrapperProps {
-  title: string;
+  isOpen: boolean;
+  onExited: () => void;
   children: ReactNode;
-  close: (result: { status: 'success' | 'error' | 'close' }) => void;
-  className?: string;
 }
 
-export function ModalWrapper({
-  title,
-  children,
-  close,
-  className,
-}: ModalWrapperProps) {
+export const ModalWrapper = ({ isOpen, onExited, children }: ModalWrapperProps) => {
   return (
-    <Dialog open onOpenChange={(open) => !open && close({ status: 'close' })}>
-      <DialogPortal>
-        <DialogOverlay />
-        <DialogContent
-          className={cn('max-w-4xl max-h-[90vh] overflow-y-auto', className)}
+    <AnimatePresence onExitComplete={onExited}>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.2 }}
         >
-          <DialogHeader className="flex items-center justify-between">
-            <DialogTitle>{title}</DialogTitle>
-            <DialogClose
-              className="rounded-sm opacity-70 transition-opacity hover:opacity-100"
-              onClick={() => close({ status: 'close' })}
-            ></DialogClose>
-          </DialogHeader>
-          <div>{children}</div>
-        </DialogContent>
-      </DialogPortal>
-    </Dialog>
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-}
+};

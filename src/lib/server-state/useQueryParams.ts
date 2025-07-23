@@ -6,7 +6,7 @@ import type { QueryResult } from './useQueryRequest';
  * ex) useApiParams(getCaskDetail, id)
  */
 export function useQueryParams<TParams extends unknown[], TResult>(
-  queryFn: (...args: TParams) => Promise<TResult>,
+  queryFn: (...args: [...TParams, AbortSignal?]) => Promise<TResult>,
   ...params: TParams
 ): QueryResult<TResult> {
   return useQueryRequest<TParams, TResult>(queryFn, params);

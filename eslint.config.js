@@ -38,6 +38,15 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/ban-types': [
+        'error',
+        {
+          types: {
+            '{}': false, // {} 타입을 허용
+          },
+        },
+      ],
       'react/react-in-jsx-scope': 'off',
     },
   }
