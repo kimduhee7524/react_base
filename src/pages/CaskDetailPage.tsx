@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { CASK_CURRENCY_OPTIONS, OLARLA_OPTIONS } from '@/constants';
 import { CaskEvent } from '@/types/cask';
 import { useQueryParams } from '@/lib/server-state/useQueryParams';
+import { CaskEventList } from '@/components/cask/CaskEventList';
 import { useEffect, useState } from 'react';
 
 export default function CaskDetailPage() {
@@ -184,19 +185,7 @@ export default function CaskDetailPage() {
         </form>
       </Form>
 
-      {events && events.length > 0 && (
-        <div className="pt-8">
-          <h2 className="text-xl font-semibold">이벤트</h2>
-          <ul className="list-disc pl-6 space-y-1">
-            {events.map((event, idx) => (
-              <li key={event.event_id ?? idx}>
-                {event.event_at} | {event.event_type} - {event.event_price}{' '}
-                {event.event_currency} ({event.event_comment})
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <CaskEventList events={events} />
     </div>
   );
 }
