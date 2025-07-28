@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { caskSearchSchema } from '@/schemas/caskSchema';
 import type {
   CaskSearchFormValues,
-  CaskFormValues,
 } from '@/schemas/caskSchema';
 import { getCaskList, createCask } from '@/services/api/cask';
 import type { CaskSearchDto } from '@/types/cask';
@@ -13,16 +12,14 @@ import { CaskFilterForm } from '@/components/CaskFilterForm';
 import { Button } from '@/components/ui/button';
 import { CaskSkeletonItem } from '@/components/skeleton/CaskSkeletonItem';
 import { CaskListItem } from '@/components/CaskListItem';
-import { useModal } from '@/lib/modal/useModal';
 import { CaskCreateModal } from '@/components/CaskCreateModal';
 import { toast } from 'sonner';
 import { useQueryParams } from '@/lib/server-state/useQueryParams';
+import { modal } from '@/lib/modal';
 
 export default function CaskListPage() {
   const PAGE_SIZE = 10;
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const { open } = useModal<CaskFormValues>(CaskCreateModal);
 
   const currentPage = Number(searchParams.get('page') || '1');
   const currentSort = searchParams.get('sort') || '';
@@ -89,13 +86,20 @@ export default function CaskListPage() {
 
   const handleCreateClick = async () => {
     try {
-      const result = await open();
-      if (!result) return;
+      const result = await modal.openAsync((props) => (
+        <CaskCreateModal {...props} />
+      ));
+      
+      if (!result) {
+        toast.info('캐스크 등록이 취소되었습니다.');
+        return;
+      }
+
       await createCask(result);
       toast.success('캐스크 등록 완료');
       refetch();
     } catch (err) {
-      toast.error('등록 실패');
+      toast.error('등록 중 오류가 발생했습니다.');
     }
   };
 
