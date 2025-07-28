@@ -8,42 +8,28 @@ import type {
 import { getCaskList, createCask } from '@/services/api/cask';
 import type { CaskSearchDto } from '@/types/cask';
 import { Pagination } from '@/components/common/Pagination';
-import { CaskFilterForm } from '@/components/CaskFilterForm';
+import { CaskFilterForm } from '@/components/cask/CaskFilterForm';
 import { Button } from '@/components/ui/button';
 import { CaskSkeletonItem } from '@/components/skeleton/CaskSkeletonItem';
-import { CaskListItem } from '@/components/CaskListItem';
-import { CaskCreateModal } from '@/components/CaskCreateModal';
+import { CaskListItem } from '@/components/cask/CaskListItem';
+import { CaskCreateModal } from '@/components/cask/CaskCreateModal';
 import { toast } from 'sonner';
 import { useQueryParams } from '@/lib/server-state/useQueryParams';
 import { modal } from '@/lib/modal';
+import { getCaskSearchDefaultValues } from '@/utils/defaultValues/CaskDefaultValues';
+import { formToQueryParams } from '@/utils/formToQueryParams';
 
 export default function CaskListPage() {
   const PAGE_SIZE = 10;
+  const SKELETON_ITEM_COUNT = 5;
   const [searchParams, setSearchParams] = useSearchParams();
-
   const currentPage = Number(searchParams.get('page') || '1');
-  const currentSort = searchParams.get('sort') || '';
-  const formValuesFromQuery: Partial<CaskSearchFormValues> = {
-    is_active: searchParams.get('is_active') !== 'false',
-    sort: currentSort,
-    cask_name: searchParams.get('cask_name') || '',
-    cask_number: searchParams.get('cask_number') || '',
-    cask_size: searchParams.get('cask_size') || '',
-    distillery_display_name: searchParams.get('distillery_display_name') || '',
-    distillery_true_name: searchParams.get('distillery_true_name') || '',
-    fill_type: searchParams.get('fill_type') || '',
-    malt_type: searchParams.get('malt_type') || '',
-    seasoning: searchParams.get('seasoning') || '',
-    warehouse: searchParams.get('warehouse') || '',
-    wood_type: searchParams.get('wood_type') || '',
-  };
+  const defaultValues: Partial<CaskSearchFormValues> = getCaskSearchDefaultValues(searchParams);
 
   const form = useForm<CaskSearchFormValues>({
     resolver: zodResolver(caskSearchSchema),
     mode: 'onChange',
-    defaultValues: {
-      ...formValuesFromQuery,
-    },
+    defaultValues,
   });
 
   const { getValues } = form;
@@ -65,16 +51,7 @@ export default function CaskListPage() {
 
   const onSubmit = () => {
     const values = getValues();
-    const newParams: Record<string, string> = { page: '1' };
-
-    Object.entries(values).forEach(([key, val]) => {
-      if (typeof val === 'boolean') {
-        newParams[key] = String(val);
-      } else if (val) {
-        newParams[key] = val;
-      }
-    });
-
+    const newParams = { page: '1', ...formToQueryParams(values) };
     setSearchParams(newParams);
   };
 
@@ -103,6 +80,10 @@ export default function CaskListPage() {
     }
   };
 
+  const isLoading = loading;
+  const isError = !!error;
+  const isEmpty = !isLoading && !isError && data?.data?.content.length === 0;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div className="flex justify-between items-center w-full">
@@ -112,17 +93,23 @@ export default function CaskListPage() {
 
       <CaskFilterForm form={form} onSubmit={onSubmit} />
 
-      {loading ? (
+      {isLoading && (
         <ul className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: SKELETON_ITEM_COUNT }).map((_, i) => (
             <CaskSkeletonItem key={i} />
           ))}
         </ul>
-      ) : error ? (
+      )}
+
+      {isError && (
         <p className="text-destructive">{error.message}</p>
-      ) : data.data.content.length === 0 ? (
+      )}
+
+      {isEmpty && (
         <p>표시할 캐스크가 없습니다.</p>
-      ) : (
+      )}
+
+      {!isLoading && !isError && !isEmpty && (
         <>
           <ul className="space-y-4">
             {data.data.content.map((cask) => (

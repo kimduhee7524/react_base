@@ -22,6 +22,7 @@ export function useQueryRequest<TParams extends unknown[], TResult>(
   const [error, setError] = useState<Error | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0); // 요청 ID 추가
 
   // params 비교를 위한 문자열 키
   const paramKey = useMemo(() => JSON.stringify(params), [params]);
@@ -31,6 +32,7 @@ export function useQueryRequest<TParams extends unknown[], TResult>(
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    const currentRequestId = requestIdRef.current++; // 요청 ID 증가
 
     setLoading(true);
     setError(null);
@@ -39,7 +41,7 @@ export function useQueryRequest<TParams extends unknown[], TResult>(
 
     queryFn(...params, signal)
       .then((res: TResult) => {
-        if (!signal.aborted) {
+        if (!signal.aborted && currentRequestId === requestIdRef.current) {
           setData(res);
         }
       })
@@ -47,10 +49,13 @@ export function useQueryRequest<TParams extends unknown[], TResult>(
         if (err instanceof DOMException && err.name === 'AbortError') {
           return;
         }
-        setError(err instanceof Error ? err : new Error('Unknown error'));
+        // 최신 요청인 경우에만 에러 설정
+        if (currentRequestId === requestIdRef.current) {
+          setError(err instanceof Error ? err : new Error('Unknown error'));
+        }
       })
       .finally(() => {
-        if (!signal.aborted) {
+        if (!signal.aborted && currentRequestId === requestIdRef.current) {
           setLoading(false);
         }
       });

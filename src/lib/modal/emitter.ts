@@ -27,6 +27,7 @@ type Emitter = {
 
 function createEmitter(): Emitter {
   const listeners: { [K in keyof Events]?: Events[K][] } = {};
+  const MAX_LISTENERS = 10;
 
   return {
     // 이벤트 등록
@@ -35,6 +36,9 @@ function createEmitter(): Emitter {
         listeners[eventName] = [];
       }
       const eventListeners = listeners[eventName] as Events[typeof eventName][];
+      if (eventListeners.length >= MAX_LISTENERS) {
+        console.warn(`Maximum listeners (${MAX_LISTENERS}) for event "${eventName}" exceeded`);
+      }
       eventListeners.push(callback);
 
       // 이벤트 제거

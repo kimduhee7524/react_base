@@ -1,7 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { memo } from 'react';
-
 import { caskFormSchema, CaskFormValues } from '@/schemas/caskSchema';
 import { Form } from '@/components/ui/form';
 import { InputField } from '@/components/form/InputField';
@@ -11,37 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CASK_CURRENCY_OPTIONS, OLARLA_OPTIONS } from '@/constants';
 import type { OverlayAsyncControllerComponent } from '@/lib/modal';
-import { ModalWrapper } from './ModalWrapper';
+import { ModalWrapper } from '@/components/common/ModalWrapper';
+import { caskFormDefaultValues } from '@/utils/defaultValues/CaskDefaultValues';
+
 
 export const CaskCreateModal: OverlayAsyncControllerComponent<CaskFormValues> = memo(
   ({ isOpen, close, unmount }) => {
     const form = useForm<CaskFormValues>({
       resolver: zodResolver(caskFormSchema),
-      defaultValues: {
-        cask_name: '',
-        cask_number: '',
-        abv: 0,
-        malt_type: '',
-        distillery_true_name: '',
-        distillery_true_name_id: 0,
-        distillery_display_name: '',
-        distillery_display_name_id: 0,
-        cask_size: '',
-        fill_type: '',
-        seasoning: '',
-        warehouse_id: 0,
-        wood_type: '',
-        lpa: 0,
-        price_per_bottle: 0,
-        price_per_lpa: 0,
-        purchase_price: 0,
-        expected_arrival_price: 0,
-        bulk_liter: 0,
-        capacity_liters: 0,
-        cask_currency: 'KRW',
-        olarla: 'OLA',
-        comment: '',
-      },
+      defaultValues: caskFormDefaultValues,
     });
 
     const {

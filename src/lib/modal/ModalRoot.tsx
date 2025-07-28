@@ -1,6 +1,7 @@
 import { ContentOverlayController } from './ContentOverlayController';
 import { useModalState } from './context';
 import { modal } from './api';
+import { useEffect } from 'react';
 
 export function ModalRoot() {
   const modals = useModalState();
@@ -18,6 +19,18 @@ export function ModalRoot() {
   if (activeModals.length === 0) {
     return null;
   }
+
+  useEffect(() => {
+    if (activeModals.length > 0) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [activeModals.length]);
 
   return (
     <div
