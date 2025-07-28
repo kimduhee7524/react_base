@@ -29,18 +29,29 @@ class OverlayManager {
   ): Promise<T> {
     const overlayId = options?.overlayId ?? randomId();
     const unmount = () => this.unmount(overlayId);
-
-    return new Promise<T>((resolve) => {
-      this.open((props) => {
-        const close = (value: T) => {
-          resolve(value);
-          unmount();
-        };
-        return controller({ ...props, close, unmount });
-      }, { overlayId });
+  
+    return new Promise<T>((resolve, reject) => {
+      try {
+        this.open((props) => {
+          const close = (value?: T | Error) => {
+            if (value instanceof Error) {
+              reject(value);
+              unmount();
+            } else {
+              resolve(value as T);
+              unmount();
+            }
+          };
+          
+          return controller({ ...props, close, unmount });
+        }, { overlayId });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
+  
   close<T>(id: string, value?: T) {
     this.emitter.emit('close', { id, value });
   }
